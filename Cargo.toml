@@ -1,0 +1,11 @@
+[package]
+name = "rustpdf"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+eframe = "0.37.0"
+image = "0.25.10"
+pdfium-render = "0.9.4"
+rfd = "0.17.2"
