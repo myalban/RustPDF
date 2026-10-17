@@ -1,6 +1,8 @@
 name: Release
 
-# Push a tag such as v0.3.0 to build the installers and attach them to a GitHub release.
+# Publishing a release: push a tag named v<version>, where <version> is the version in Cargo.toml.
+#   git tag -a v0.3.0 -m "RustPDF 0.3.0" && git push origin v0.3.0
+# (scripts/release.ps1 does the whole sequence.) A tag with a dash, such as v0.3.0-rc1, is published as a pre-release.
 on:
   push:
     tags: ['v*']
@@ -9,8 +11,25 @@ permissions:
   contents: write
 
 jobs:
+  check:
+    name: Check the tag matches Cargo.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          crate="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          base="${tag%%-*}"
+          echo "tag=$tag crate=$crate"
+          if [ "$base" != "$crate" ]; then
+            echo "::error::The tag ($GITHUB_REF_NAME) does not match the version in Cargo.toml ($crate). Fix Cargo.toml or delete the tag."
+            exit 1
+          fi
+
   package:
     name: Package (${{ matrix.os }})
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,6 +46,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libgtk-3-dev libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev libxi-dev libxrandr-dev libgl1-mesa-dev
 
+      - name: Tests
+        if: runner.os == 'Linux'
+        run: |
+          sh scripts/fetch-pdfium.sh
+          sudo apt-get install -y fonts-dejavu-core
+          cargo test --locked
+
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: sh installer/build-linux.sh
@@ -42,13 +68,33 @@ jobs:
           scripts/fetch-pdfium.ps1
           installer/build-portable.ps1
           choco install innosetup -y --no-progress
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rustpdf.iss
+          $version = "${{ github.ref_name }}".TrimStart('v') -replace '-.*$', ''
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVer=$version" installer\rustpdf.iss
 
-      - name: Attach to the release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: package-${{ runner.os }}
+          path: |
             dist/*.tar.gz
             dist/*.dmg
             dist/*.zip
             dist/*.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish the GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+      - name: List the files
+        run: ls -la dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

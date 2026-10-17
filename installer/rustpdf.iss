@@ -1,9 +1,9 @@
 ; Inno Setup script (https://jrsoftware.org/isinfo.php) - compile with: iscc installer\rustpdf.iss
 ; Prerequisite: cargo build --release  (the script copies target\release\rustpdf.exe and pdfium.dll)
-; Prerequisite: cargo build --release  (the script copies target
-elease
-ustpdf.exe and pdfium.dll)
-#define AppVer "0.2.0"
+; Version: pass /DAppVer=1.2.3 to override (the release workflow does).
+#ifndef AppVer
+  #define AppVer "0.2.0"
+#endif
 [Setup]
 AppName=RustPDF
 AppVersion={#AppVer}
