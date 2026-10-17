@@ -67,7 +67,7 @@ jobs:
           $version = "${{ github.ref_name }}".TrimStart('v') -replace '-.*$', ''
           & $iscc "/DAppVer=$version" installer\rustpdf.iss
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: package-${{ runner.os }}
           path: |
