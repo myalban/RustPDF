@@ -355,6 +355,7 @@ pub const T: &[(&str, &str)] = &[
     ("sign_years", "Validità (anni)"),
     ("sign_p12_password", "Password del certificato"),
     ("sign_generate", "Genera"),
+    ("sign_password_needed", "È necessaria una password: protegge la copia salvata della chiave."),
     ("back", "Indietro"),
     ("sign_choose_cert", "Scegli un certificato di firma:"),
     ("sign_open_p12", "Apri un file .pfx / .p12…"),

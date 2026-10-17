@@ -82,9 +82,13 @@ pub fn effective_url(pref: &str) -> &str {
 }
 
 fn fetch(url: &str) -> Result<String, String> {
+    if !url.to_ascii_lowercase().starts_with("https://") {
+        return Err("the update address must start with https://".into());
+    }
     let mut c = Command::new(if cfg!(windows) { "curl.exe" } else { "curl" });
     // GitHub's API refuses requests without a User-Agent
-    c.args(["-sSL", "--max-time", "8", "-H", "User-Agent: RustPDF", "-H", "Accept: application/vnd.github+json", url]);
+    // HTTPS only (also for redirects), a small answer at most, and `--` so that the address can never be read as an option
+    c.args(["-sSL", "--max-time", "8", "--max-filesize", "1048576", "--proto", "=https", "--proto-redir", "=https", "-H", "User-Agent: RustPDF", "-H", "Accept: application/vnd.github+json", "--", url]);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -151,6 +155,13 @@ mod tests {
         assert!(parse(r#"{"message":"Not Found"}"#).is_err());
         assert!(parse("not json").is_err());
         assert_eq!(parse(r#"{"message":"Not Found","status":"404"}"#), Err(NO_RELEASE.to_string()));
+    }
+
+    #[test]
+    fn only_https_addresses_are_fetched() {
+        for bad in ["http://example.org/x.json", "file:///etc/passwd", "--output=/tmp/x", "ftp://x"] {
+            assert!(matches!(check_release(bad), Outcome::Error(_)), "{bad}");
+        }
     }
 
     #[test]

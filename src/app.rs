@@ -233,6 +233,13 @@ impl App {
                     }
                 }
                 tab.paragraphs = true;
+                // keep the password protection of the original when the document is saved
+                if std::fs::metadata(path).map(|m| m.len() < 256 * 1024 * 1024).unwrap_or(false) {
+                    if let Ok(original) = std::fs::read(path) {
+                        let pw = tab.password.clone();
+                        tab.remember_protection(&original, pw.as_deref());
+                    }
+                }
                 self.recent.add(&clean);
                 self.tabs.push(tab);
                 self.active = self.tabs.len() - 1;

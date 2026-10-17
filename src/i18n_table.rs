@@ -365,6 +365,7 @@ pub const TABLE: &[(&str, &str, &str)] = &[
     ("sign_years", "Validité (ans)", "Validity (years)"),
     ("sign_p12_password", "Mot de passe du certificat", "Certificate password"),
     ("sign_generate", "Générer", "Generate"),
+    ("sign_password_needed", "Un mot de passe est nécessaire : il protège la copie de la clé enregistrée.", "A password is required: it protects the saved copy of the key."),
     ("back", "Retour", "Back"),
     ("sign_choose_cert", "Choisissez un certificat de signature :", "Choose a signing certificate:"),
     ("sign_open_p12", "Ouvrir un fichier .pfx / .p12…", "Open a .pfx / .p12 file…"),

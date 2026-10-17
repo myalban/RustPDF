@@ -97,6 +97,17 @@ pub fn open_url(u: &str) -> bool {
     true
 }
 
+/// Makes a file readable by its owner only (private keys, recovery copies). Windows files in the user profile are
+/// already private to the user.
+#[allow(unused_variables)]
+pub fn restrict_to_owner(path: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+    }
+}
+
 /// Content of the freedesktop `.desktop` entry that declares RustPDF as a PDF viewer (Linux).
 #[cfg_attr(windows, allow(dead_code))]
 pub fn desktop_entry(exe: &str) -> String {

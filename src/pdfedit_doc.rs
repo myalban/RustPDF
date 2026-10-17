@@ -287,6 +287,27 @@ pub struct SecurityInfo {
 /// Reads the rights of an encrypted document from `/Encrypt /P`; `None` if the file is not encrypted.
 pub fn read_security(bytes: &[u8]) -> Option<SecurityInfo> {
     let doc = Document::load_mem(bytes).ok()?;
+    // A document without user password is decrypted on load and its /Encrypt entry is removed from the trailer:
+    // the permissions then come from the decryption state.
+    if let Some(state) = &doc.encryption_state {
+        use lopdf::Permissions as P;
+        let p = state.permissions();
+        return Some(SecurityInfo {
+            revision: state.revision(),
+            aes: state.version() >= 4,
+            allow: Security {
+                user_password: String::new(),
+                owner_password: String::new(),
+                allow_print: p.contains(P::PRINTABLE),
+                allow_print_hq: p.contains(P::PRINTABLE_IN_HIGH_QUALITY),
+                allow_copy: p.contains(P::COPYABLE),
+                allow_modify: p.contains(P::MODIFIABLE),
+                allow_annotate: p.contains(P::ANNOTABLE),
+                allow_fill: p.contains(P::FILLABLE),
+                allow_assemble: p.contains(P::ASSEMBLABLE),
+            },
+        });
+    }
     let enc = match doc.trailer.get(b"Encrypt").ok()? {
         Object::Reference(r) => doc.get_dictionary(*r).ok()?.clone(),
         Object::Dictionary(d) => d.clone(),

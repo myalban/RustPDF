@@ -23,9 +23,11 @@ pub fn write(tab: &mut Tab) -> Option<PathBuf> {
     if !tab.dirty {
         return None;
     }
-    let bytes = tab.doc.save_to_bytes().ok()?;
+    // same bytes as a normal save: a password-protected document is not written unprotected in the recovery folder
+    let bytes = tab.bytes_for_save().ok()?;
     let f = dir().join(format!("tab{}_{}.pdf", tab.id, std::process::id()));
     std::fs::write(&f, bytes).ok()?;
+    crate::sys::restrict_to_owner(&f);
     let meta = Meta { orig: tab.path.as_ref().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(), title: tab.title.clone(), saved_at: logx::unix_secs() };
     let _ = std::fs::write(f.with_extension("json"), serde_json::to_string(&meta).unwrap_or_default());
     tab.autosave_file = Some(f.clone());

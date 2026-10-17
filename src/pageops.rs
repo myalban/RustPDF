@@ -415,9 +415,28 @@ impl Tab {
     /// Bytes to write on save: encrypted if a protection is active.
     pub fn bytes_for_save(&self) -> Result<Vec<u8>, String> {
         let b = self.doc.save_to_bytes().map_err(err)?;
-        match &self.security {
-            Some(s) if s.is_active() => pdfedit_doc::encrypt(&b, s),
+        let still_encrypted = b.windows(8).any(|w| w == b"/Encrypt");
+        match (&self.security, &self.original_protection) {
+            (Some(s), _) if s.is_active() => pdfedit_doc::encrypt(&b, s),
+            // opened protected and an edit removed the protection: put it back
+            (_, Some(orig)) if !still_encrypted => pdfedit_doc::encrypt(&b, orig),
             _ => Ok(b),
+        }
+    }
+
+    /// Remembers the protection of a document opened from an encrypted file. PDFium keeps it when it saves, but the
+    /// `lopdf` based operations (pages, annotations, forms…) decrypt a document that has no user password and would
+    /// then write it unprotected: `bytes_for_save` puts the protection back in that case.
+    pub fn remember_protection(&mut self, file_bytes: &[u8], password: Option<&str>) {
+        if !file_bytes.windows(8).any(|w| w == b"/Encrypt") {
+            return;
+        }
+        if let Some(info) = pdfedit_doc::read_security(file_bytes) {
+            let pw = password.unwrap_or("").to_string();
+            let mut s = info.allow;
+            s.user_password = pw.clone();
+            s.owner_password = pw;
+            self.original_protection = Some(s).filter(|x| x.is_active());
         }
     }
 
@@ -669,4 +688,33 @@ mod tests {
         t.set_security(None);
         assert!(crate::pdfx::open_bytes(p, t.bytes_for_save().unwrap(), None).is_ok());
     }
+
+    #[test]
+    fn edits_do_not_strip_the_protection_of_the_original() {
+        let p = crate::pdfx::test_pdfium();
+        let plain = tab(3).doc.save_to_bytes().unwrap();
+        // restrictions only, no user password: the lopdf based operations decrypt such a document
+        let secured = pdfedit_doc::encrypt(&plain, &Security { user_password: String::new(), owner_password: "owner".into(), allow_copy: false, ..Security::default() }).unwrap();
+        let doc = crate::pdfx::open_bytes(p, secured.clone(), None).unwrap();
+        let mut t = Tab::new(p, doc, None, None, 1.0);
+        t.remember_protection(&secured, None);
+        assert!(t.original_protection.is_some());
+        // untouched: PDFium keeps the protection by itself
+        let untouched = t.bytes_for_save().unwrap();
+        assert!(!pdfedit_doc::read_security(&untouched).unwrap().allow.allow_copy);
+        // after a structure edit the saved file is still restricted
+        t.rotate_page_list(&[0], 90, 100).unwrap();
+        let saved = t.bytes_for_save().unwrap();
+        let info = pdfedit_doc::read_security(&saved).expect("saved file is still encrypted");
+        assert!(!info.allow.allow_copy && info.allow.allow_print, "permissions kept: {info:?}");
+        // the owner password is unknown to us (only the permissions are kept), the file still opens without a password
+        assert!(crate::pdfx::open_bytes(p, saved, None).is_ok());
+        // an unprotected original stays unprotected
+        let mut t2 = tab(1);
+        t2.remember_protection(&plain, None);
+        assert!(t2.original_protection.is_none());
+        assert!(pdfedit_doc::read_security(&t2.bytes_for_save().unwrap()).is_none());
+    }
+
+
 }

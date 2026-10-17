@@ -184,6 +184,8 @@ pub struct Tab {
     pub calc: Option<(u64, Vec<crate::pdfedit_forms::CalcRule>)>,
     /// Protection to apply on save (password, rights).
     pub security: Option<crate::pdfedit_doc::Security>,
+    /// Protection of the file as it was opened (password, permissions): restored on save if an edit stripped it.
+    pub original_protection: Option<crate::pdfedit_doc::Security>,
     pub view: ViewState,
     pub sel: Selection,
     pub search: SearchState,
@@ -233,6 +235,7 @@ impl Tab {
             paragraphs: true,
             calc: None,
             security: None,
+            original_protection: None,
             view: ViewState::new(zoom),
             sel: Selection::default(),
             search: SearchState::default(),

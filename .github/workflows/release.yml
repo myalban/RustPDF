@@ -20,24 +20,28 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Check the tag matches Cargo.toml
         shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${TAG#v}"
           crate="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           base="${tag%%-*}"
           echo "tag=$tag crate=$crate"
           if [ "$base" != "$crate" ]; then
-            echo "::error::The tag ($GITHUB_REF_NAME) does not match the version in Cargo.toml ($crate). Fix Cargo.toml or delete the tag."
+            echo "::error::The tag ($TAG) does not match the version in Cargo.toml ($crate). Fix Cargo.toml or delete the tag."
             exit 1
           fi
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
 
       # same key as ci.yml: the release build compiled by CI on main is reused here
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: build-${{ runner.os }}
           save-if: false
@@ -59,15 +63,17 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           scripts/fetch-pdfium.ps1
           installer/build-portable.ps1
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
-          $version = "${{ github.ref_name }}".TrimStart('v') -replace '-.*$', ''
+          $version = $env:TAG.TrimStart("v") -replace "-.*$", ""
           & $iscc "/DAppVer=$version" installer\rustpdf.iss
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: package-${{ runner.os }}
           path: |
@@ -85,12 +91,15 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
           pattern: package-*
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - name: Checksums of the published files
+        working-directory: dist
+        run: sha256sum -- ./* | sed "s|  ./|  |" | grep -v SHA256SUMS > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: dist/*
           generate_release_notes: true

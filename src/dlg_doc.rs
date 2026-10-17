@@ -275,10 +275,13 @@ impl App {
                     ui.add(egui::TextEdit::singleline(&mut c.password).password(true));
                     ui.end_row();
                 });
+                if c.password.is_empty() {
+                    ui.small(t("sign_password_needed"));
+                }
                 let mut start = None;
                 let mut back = false;
                 ui.horizontal(|ui| {
-                    if ui.add_enabled(!c.name.trim().is_empty(), egui::Button::new(t("sign_generate"))).clicked() {
+                    if ui.add_enabled(!c.name.trim().is_empty() && !c.password.is_empty(), egui::Button::new(t("sign_generate"))).clicked() {
                         start = Some((c.name.clone(), c.org.clone(), c.email.clone(), c.years, c.password.clone()));
                     }
                     if ui.button(t("back")).clicked() {
@@ -290,9 +293,15 @@ impl App {
                     std::thread::spawn(move || {
                         let r = crate::sign::Identity::create_self_signed(&name, &org, &email, years, 2048);
                         if let Ok(id) = &r {
-                            // backup copy in the application folder
-                            if let Ok(p12) = id.to_pkcs12(&pass) {
-                                let _ = std::fs::write(crate::logx::data_dir().join(format!("certificat_{}.p12", name.replace(' ', "_"))), p12);
+                            // password-protected backup copy in the application folder (the name is reduced to safe characters)
+                            if !pass.is_empty() {
+                                if let Ok(p12) = id.to_pkcs12(&pass) {
+                                    let safe: String = name.chars().map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' }).collect();
+                                    let file = crate::logx::data_dir().join(format!("certificate_{safe}.p12"));
+                                    if std::fs::write(&file, p12).is_ok() {
+                                        crate::sys::restrict_to_owner(&file);
+                                    }
+                                }
                             }
                         }
                         let _ = tx.send(r);
