@@ -1,11 +1,40 @@
 [package]
 name = "rustpdf"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+description = "Desktop PDF editor written in Rust"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.104"
+arboard = "3.7.0"
 eframe = "0.37.0"
+fontdb = "0.23"
+getrandom = "0.3"
 image = "0.25.10"
+lopdf = "0.45.0"
 pdfium-render = "0.9.4"
 rfd = "0.17.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sys-locale = "0.3"
+rsa = { version = "0.9", features = ["sha2"] }
+sha2 = "0.10"
+sha1 = { version = "0.10", features = ["oid"] }
+cms = { version = "0.2", features = ["builder", "std"] }
+x509-cert = { version = "0.2", features = ["builder", "std", "pem"] }
+der = { version = "0.7", features = ["alloc", "derive", "oid", "std"] }
+const-oid = { version = "0.9", features = ["db"] }
+spki = "0.7"
+pkcs8 = { version = "0.10", features = ["pem", "std"] }
+signature = "2"
+rand_core = { version = "0.6", features = ["getrandom"] }
+p12-keystore = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 8
+
+[build-dependencies]
+winresource = "0.1"
