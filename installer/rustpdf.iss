@@ -7,7 +7,7 @@ ustpdf.exe and pdfium.dll)
 [Setup]
 AppName=RustPDF
 AppVersion={#AppVer}
-AppPublisher=RustPDF
+AppPublisher=Alban DOUSSAU de GUYONNET
 DefaultDirName={autopf}\RustPDF
 DefaultGroupName=RustPDF
 OutputDir=..\dist

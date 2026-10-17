@@ -71,7 +71,7 @@ pub fn simplify_stroke(s: &[[f32; 2]], eps: f32) -> Vec<[f32; 2]> {
 }
 
 /// Candidate script fonts for a typed signature (the first ones present on the system are offered).
-pub const SCRIPT_FONTS: &[&str] = &["Segoe Script", "Lucida Handwriting", "Ink Free", "Brush Script MT", "Segoe Print", "Mistral", "Freestyle Script", "Edwardian Script ITC", "Monotype Corsiva", "Comic Sans MS"];
+pub const SCRIPT_FONTS: &[&str] = &["Segoe Script", "Snell Roundhand", "Apple Chancery", "Zapfino", "URW Chancery L", "Z003", "Purisa", "Kalam", "Lucida Handwriting", "Ink Free", "Brush Script MT", "Segoe Print", "Mistral", "Freestyle Script", "Edwardian Script ITC", "Monotype Corsiva", "Comic Sans MS"];
 
 pub fn available_script_fonts() -> Vec<String> {
     let cat = crate::fonts::catalog();

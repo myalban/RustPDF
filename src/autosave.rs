@@ -69,7 +69,7 @@ mod tests {
         let p = crate::pdfx::test_pdfium();
         let mut doc = p.create_new_pdf().unwrap();
         doc.pages_mut().create_page_at_end(pdfium_render::prelude::PdfPagePaperSize::a4()).unwrap();
-        let mut tab = Tab::new(p, doc, Some(PathBuf::from(r"C:\x\test_rp.pdf")), None, 1.0);
+        let mut tab = Tab::new(p, doc, Some(std::env::temp_dir().join("test_rp.pdf")), None, 1.0);
         assert!(write(&mut tab).is_none(), "nothing to save while the document is not modified");
         tab.dirty = true;
         let f = write(&mut tab).expect("backup file");

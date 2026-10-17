@@ -202,7 +202,7 @@ impl Default for Prefs {
             show_fields: true,
             undo_mem_mb: 400,
             cache_mb: 512,
-            author: std::env::var("USERNAME").unwrap_or_default(),
+            author: std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_default(),
             restore_view: true,
         }
     }

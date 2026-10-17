@@ -7,7 +7,8 @@ use crate::textgroup::{self, Run};
 use pdfium_render::prelude::*;
 use std::path::Path;
 
-/// Initializes PDFium: looks for `pdfium.dll` next to the executable, in the current folder, then in the system.
+/// Initializes PDFium: looks for the PDFium library (`pdfium.dll`, `libpdfium.so` or `libpdfium.dylib`) next to the
+/// executable, in the current folder, then in the system.
 pub fn load_pdfium() -> anyhow::Result<&'static Pdfium> {
     let exe_dir = std::env::current_exe()
         .ok()
@@ -26,7 +27,7 @@ pub fn load_pdfium() -> anyhow::Result<&'static Pdfium> {
     }
     match Pdfium::bind_to_system_library() {
         Ok(b) => Ok(Box::leak(Box::new(Pdfium::new(b)))),
-        Err(e) => Err(anyhow::anyhow!("pdfium.dll not found: {:?} / {:?}", last, e)),
+        Err(e) => Err(anyhow::anyhow!("PDFium library not found (pdfium.dll, libpdfium.so or libpdfium.dylib): {:?} / {:?}", last, e)),
     }
 }
 

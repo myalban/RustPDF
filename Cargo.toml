@@ -4,6 +4,11 @@ version = "0.2.0"
 edition = "2024"
 description = "Desktop PDF editor written in Rust"
 license = "MIT"
+authors = ["Alban DOUSSAU de GUYONNET"]
+repository = "https://github.com/myalban/rustpdf"
+readme = "README.md"
+keywords = ["pdf", "editor", "egui", "pdfium"]
+categories = ["visualization", "multimedia::images"]
 
 [dependencies]
 anyhow = "1.0.104"
@@ -36,5 +41,5 @@ opt-level = 3
 lto = "thin"
 codegen-units = 8
 
-[build-dependencies]
+[target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

@@ -383,7 +383,7 @@ impl App {
                         self.pending_cmds.push(Cmd::SetTool(tl));
                     }
                 }
-                ui.separator();
+                ui.end_row();
                 for c in [Cmd::ZoomOut, Cmd::ZoomIn, Cmd::FitWidth, Cmd::FitPage] {
                     if icon_button(ui, c.icon(), t(c.label_key()), false).clicked() {
                         self.pending_cmds.push(c);

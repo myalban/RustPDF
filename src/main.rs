@@ -70,9 +70,11 @@ fn main() -> eframe::Result<()> {
         }
     };
     let files: Vec<PathBuf> = std::env::args().skip(1).map(PathBuf::from).filter(|p| p.exists()).collect();
-    let opts = eframe::NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default().with_inner_size([1360.0, 880.0]).with_min_inner_size([640.0, 420.0]).with_title("RustPDF").with_drag_and_drop(true),
-        ..Default::default()
-    };
+    let mut viewport = eframe::egui::ViewportBuilder::default().with_inner_size([1360.0, 880.0]).with_min_inner_size([640.0, 420.0]).with_title("RustPDF").with_app_id("rustpdf").with_drag_and_drop(true);
+    if let Ok(img) = image::load_from_memory(include_bytes!("../assets/icon.png")) {
+        let rgba = img.to_rgba8();
+        viewport = viewport.with_icon(eframe::egui::IconData { width: rgba.width(), height: rgba.height(), rgba: rgba.into_raw() });
+    }
+    let opts = eframe::NativeOptions { viewport, ..Default::default() };
     eframe::run_native("RustPDF", opts, Box::new(move |_cc| Ok(Box::new(app::App::new(pdfium, files)))))
 }

@@ -1,5 +1,5 @@
 //! Update: reads a small JSON file `{"version": "x.y.z", "url": "…", "notes": "…"}` at the configured address.
-//! The download goes through `curl.exe` (shipped with Windows 10/11): no additional network dependency.
+//! The download goes through `curl` (shipped with Windows 10/11, macOS and most Linux distributions): no additional network dependency.
 
 use crate::i18n::t;
 use serde::Deserialize;
@@ -35,7 +35,7 @@ pub fn is_newer(candidate: &str, current: &str) -> bool {
 }
 
 fn fetch(url: &str) -> Result<String, String> {
-    let mut c = Command::new("curl.exe");
+    let mut c = Command::new(if cfg!(windows) { "curl.exe" } else { "curl" });
     c.args(["-sSL", "--max-time", "8", url]);
     #[cfg(windows)]
     {

@@ -3,14 +3,28 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-/// Application data folder (`%APPDATA%\RustPDF`).
+/// Per-user configuration folder of the platform: `%APPDATA%` on Windows,
+/// `~/Library/Application Support` on macOS, `$XDG_CONFIG_HOME` or `~/.config` on Linux.
+fn config_base() -> Option<PathBuf> {
+    let home = || std::env::var_os("HOME").map(PathBuf::from);
+    #[cfg(windows)]
+    {
+        std::env::var_os("APPDATA").map(PathBuf::from).or_else(home)
+    }
+    #[cfg(target_os = "macos")]
+    {
+        home().map(|h| h.join("Library/Application Support"))
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).filter(|p| p.is_absolute()).or_else(|| home().map(|h| h.join(".config")))
+    }
+}
+
+/// Application data folder: `<config>/RustPDF` (`<config>/rustpdf` on Linux, by convention).
 pub fn data_dir() -> PathBuf {
-    let base = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(PathBuf::from))
-        .or_else(|| std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf())))
-        .unwrap_or_default();
-    let d = base.join("RustPDF");
+    let base = config_base().or_else(|| std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_path_buf()))).unwrap_or_default();
+    let d = base.join(if cfg!(all(unix, not(target_os = "macos"))) { "rustpdf" } else { "RustPDF" });
     let _ = std::fs::create_dir_all(&d);
     d
 }
