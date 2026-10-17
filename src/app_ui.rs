@@ -133,6 +133,39 @@ impl App {
                 }
             }
         }
+        // Automatic update check: once a day, in the background.
+        if !self.update_started && self.prefs.check_updates && ctx.input(|i| i.time) > 4.0 {
+            self.update_started = true;
+            let now = crate::logx::unix_secs();
+            if now.saturating_sub(self.prefs.last_update_check) > 24 * 3600 {
+                self.prefs.last_update_check = now;
+                self.prefs.save();
+                let url = crate::updater::effective_url(&self.prefs.update_url).to_string();
+                let (tx, rx) = std::sync::mpsc::channel();
+                std::thread::spawn(move || {
+                    let _ = tx.send(crate::updater::check_release(&url));
+                });
+                self.update_rx = Some(rx);
+            }
+        }
+        if let Some(rx) = &self.update_rx {
+            match rx.try_recv() {
+                Ok(outcome) => {
+                    self.update_rx = None;
+                    match &outcome {
+                        crate::updater::Outcome::Newer(r) => {
+                            let msg = crate::updater::describe(&outcome);
+                            self.say(format!("{} {}", t("update_available"), r.version));
+                            self.update_found = Some((r.version.clone(), msg));
+                        }
+                        crate::updater::Outcome::Error(e) => logx::warn(format!("update check failed: {e}")),
+                        crate::updater::Outcome::UpToDate => {}
+                    }
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => ctx.request_repaint_after(std::time::Duration::from_secs(1)),
+                Err(_) => self.update_rx = None,
+            }
+        }
         // While idle: prepare the undo snapshot of the active document (the next edit becomes instant).
         if ctx.input(|i| !i.events.is_empty() || i.pointer.any_down() || i.pointer.delta() != egui::Vec2::ZERO) {
             self.last_input = std::time::Instant::now();
@@ -574,6 +607,12 @@ impl App {
             // messages: disappear after a few seconds
             if self.status_at.elapsed().as_secs() < 12 {
                 ui.label(&self.status);
+            }
+            if let Some((v, _)) = &self.update_found {
+                ui.separator();
+                if ui.link(format!("⬆ {} {v}", t("update_available"))).clicked() {
+                    self.pending_cmds.push(Cmd::CheckUpdates);
+                }
             }
             if let Some((_, x, y)) = coords {
                 ui.separator();

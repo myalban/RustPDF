@@ -143,6 +143,7 @@ Known limitations:
 - Undo keeps full-document snapshots (the memory cap is configurable).
 - Digital signatures are RSA only and the certificate chain is not validated against a trust store.
 - Text in subset fonts is replaced by a system font when glyphs are missing.
+- Updates: RustPDF checks GitHub for a newer release at most once a day (switch it off in Preferences) and shows a link in the status bar; it never downloads or installs anything by itself.
 - macOS: opening a file through Finder's "Open with" is not wired up yet; use *File → Open* or drop the file on the window.
 - Translations were written without a native review. Corrections are very welcome.
 

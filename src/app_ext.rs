@@ -244,12 +244,13 @@ impl App {
     }
 
     fn check_updates(&mut self) {
-        let url = self.prefs.update_url.clone();
-        if url.trim().is_empty() {
-            self.open_dlg2(Dlg2::Updates(t("update_none_configured").to_string()));
+        // a newer release was already found by the automatic check
+        if let Some((_, msg)) = self.update_found.clone() {
+            self.open_dlg2(Dlg2::Updates(msg));
             return;
         }
-        let msg = crate::updater::check(&url);
+        let url = crate::updater::effective_url(&self.prefs.update_url).to_string();
+        let msg = crate::updater::describe(&crate::updater::check_release(&url));
         self.open_dlg2(Dlg2::Updates(msg));
     }
 }

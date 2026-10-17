@@ -180,6 +180,8 @@ pub struct Prefs {
     pub cache_mb: u32,
     pub author: String,
     pub restore_view: bool,
+    /// Unix time of the last automatic update check.
+    pub last_update_check: u64,
 }
 
 impl Default for Prefs {
@@ -193,7 +195,7 @@ impl Default for Prefs {
             cover_page: false,
             export_dpi: 300.0,
             default_dir: String::new(),
-            check_updates: false,
+            check_updates: true,
             update_url: String::new(),
             autosave_secs: 120,
             units: Unit::Mm,
@@ -204,6 +206,7 @@ impl Default for Prefs {
             cache_mb: 512,
             author: std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_default(),
             restore_view: true,
+            last_update_check: 0,
         }
     }
 }

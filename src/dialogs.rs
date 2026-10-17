@@ -314,7 +314,7 @@ impl App {
                 ui.end_row();
 
                 ui.label(t("pref_update_url"));
-                ui.add(egui::TextEdit::singleline(&mut p.update_url).desired_width(260.0).hint_text("https://…/latest.json"));
+                ui.add(egui::TextEdit::singleline(&mut p.update_url).desired_width(260.0).hint_text(crate::updater::DEFAULT_URL));
                 ui.end_row();
             });
             ui.separator();
