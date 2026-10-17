@@ -370,6 +370,8 @@ impl App {
     fn toolbar(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context) {
         let has = !self.tabs.is_empty();
         let tool = self.tool;
+        // wide window: everything on a single line; otherwise two rows (tools, then view)
+        let single = ui.available_width() > 1260.0;
         ui.horizontal_wrapped(|ui| {
             ui.add_enabled_ui(true, |ui| {
                 for c in [Cmd::Open] {
@@ -416,7 +418,7 @@ impl App {
                         self.pending_cmds.push(Cmd::SetTool(tl));
                     }
                 }
-                ui.end_row();
+                if single { ui.separator(); } else { ui.end_row(); }
                 for c in [Cmd::ZoomOut, Cmd::ZoomIn, Cmd::FitWidth, Cmd::FitPage] {
                     if icon_button(ui, c.icon(), t(c.label_key()), false).clicked() {
                         self.pending_cmds.push(c);

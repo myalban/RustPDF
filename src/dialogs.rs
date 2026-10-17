@@ -308,6 +308,9 @@ impl App {
                 ui.label(t("pref_restore_view"));
                 ui.checkbox(&mut p.restore_view, "");
                 ui.end_row();
+                ui.label(t("pref_reading_default"));
+                ui.checkbox(&mut p.open_in_reading_mode, "");
+                ui.end_row();
 
                 ui.label(t("pref_check_updates"));
                 ui.checkbox(&mut p.check_updates, "");
@@ -349,6 +352,7 @@ impl App {
             || p.autosave_secs != self.prefs.autosave_secs
             || p.undo_mem_mb != self.prefs.undo_mem_mb
             || p.restore_view != self.prefs.restore_view
+            || p.open_in_reading_mode != self.prefs.open_in_reading_mode
             || p.check_updates != self.prefs.check_updates
             || p.update_url != self.prefs.update_url
             || p.author != self.prefs.author

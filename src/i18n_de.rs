@@ -78,6 +78,7 @@ pub const T: &[(&str, &str)] = &[
     ("pref_cache", "Darstellungscache"),
     ("pref_undo_mem", "Speicher für Rückgängig"),
     ("pref_restore_view", "Auf der letzten Seite öffnen"),
+    ("pref_reading_default", "Dokumente im Lesemodus öffnen"),
     ("pref_check_updates", "Nach Updates suchen"),
     ("pref_update_url", "Update-URL"),
     ("assoc_pdf", "Mit .pdf-Dateien verknüpfen"),

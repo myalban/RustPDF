@@ -82,6 +82,7 @@ pub const TABLE: &[(&str, &str, &str)] = &[
     ("pref_cache", "Cache de rendu", "Render cache"),
     ("pref_undo_mem", "Mémoire d'annulation", "Undo memory"),
     ("pref_restore_view", "Rouvrir à la dernière page", "Reopen at last page"),
+    ("pref_reading_default", "Ouvrir les documents en mode lecture", "Open documents in reading mode"),
     ("pref_check_updates", "Vérifier les mises à jour", "Check for updates"),
     ("pref_update_url", "Adresse des mises à jour", "Update URL"),
     ("assoc_pdf", "Associer aux fichiers .pdf", "Associate with .pdf files"),

@@ -78,6 +78,7 @@ pub const T: &[(&str, &str)] = &[
     ("pref_cache", "Caché de renderizado"),
     ("pref_undo_mem", "Memoria de deshacer"),
     ("pref_restore_view", "Reabrir en la última página"),
+    ("pref_reading_default", "Abrir los documentos en modo lectura"),
     ("pref_check_updates", "Buscar actualizaciones"),
     ("pref_update_url", "URL de actualización"),
     ("assoc_pdf", "Asociar con archivos .pdf"),

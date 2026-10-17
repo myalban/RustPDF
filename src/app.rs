@@ -236,6 +236,9 @@ impl App {
                 self.recent.add(&clean);
                 self.tabs.push(tab);
                 self.active = self.tabs.len() - 1;
+                if self.prefs.open_in_reading_mode && !self.reading {
+                    self.pending_cmds.push(Cmd::ReadingMode);
+                }
                 self.say(format!("{} — {}", t("opened"), clean.display()));
                 logx::info(format!("opened: {}", clean.display()));
             }

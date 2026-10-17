@@ -180,6 +180,8 @@ pub struct Prefs {
     pub cache_mb: u32,
     pub author: String,
     pub restore_view: bool,
+    /// Open every document in reading mode (no object frames, hand tool).
+    pub open_in_reading_mode: bool,
     /// Unix time of the last automatic update check.
     pub last_update_check: u64,
 }
@@ -206,6 +208,7 @@ impl Default for Prefs {
             cache_mb: 512,
             author: std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_default(),
             restore_view: true,
+            open_in_reading_mode: true,
             last_update_check: 0,
         }
     }
