@@ -34,11 +34,10 @@ pub fn open_folder(p: &Path) {
 }
 
 pub fn open_file(p: &Path) {
+    // no shell involved: the path is passed as a single argument
     #[cfg(windows)]
     {
-        let mut c = Command::new("cmd");
-        c.args(["/C", "start", "", &p.to_string_lossy()]);
-        let _ = run(&mut c);
+        let _ = Command::new("explorer").arg(p).spawn();
     }
     #[cfg(not(windows))]
     {
@@ -46,17 +45,32 @@ pub fn open_file(p: &Path) {
     }
 }
 
-pub fn open_url(u: &str) {
+/// Only web and mail links may be opened. Links come from documents we do not trust (a PDF link can point to
+/// `file:///…/program.exe`, `javascript:…`, a UNC share…), so everything else is refused.
+pub fn is_safe_url(u: &str) -> bool {
+    let u = u.trim();
+    let lower = u.to_ascii_lowercase();
+    let scheme_ok = ["http://", "https://", "mailto:"].iter().any(|s| lower.starts_with(s));
+    scheme_ok && u.len() <= 2048 && !u.chars().any(|c| c.is_control() || matches!(c, '"' | '<' | '>' | '^' | '`' | '\\'))
+}
+
+/// Opens a link in the default browser / mail client if it is safe (see `is_safe_url`). Returns whether it was opened.
+pub fn open_url(u: &str) -> bool {
+    if !is_safe_url(u) {
+        crate::logx::warn(format!("link blocked: {}", u.chars().take(120).collect::<String>()));
+        return false;
+    }
+    let u = u.trim();
+    // no shell involved (`cmd /C start` would interpret characters such as `&`)
     #[cfg(windows)]
     {
-        let mut c = Command::new("cmd");
-        c.args(["/C", "start", "", u]);
-        let _ = run(&mut c);
+        let _ = Command::new("rundll32").args(["url.dll,FileProtocolHandler", u]).spawn();
     }
     #[cfg(not(windows))]
     {
         let _ = Command::new(OPENER).arg(u).spawn();
     }
+    true
 }
 
 /// Content of the freedesktop `.desktop` entry that declares RustPDF as a PDF viewer (Linux).
@@ -131,6 +145,16 @@ mod tests {
         let expected = r#""C:\Program Files\RustPDF\rustpdf.exe" "%1""#;
         assert!(open.iter().any(|a| a == expected));
         assert!(cmds.iter().all(|c| c[0] == "add" && c.last().map(|a| a == "/f").unwrap_or(false)));
+    }
+
+    #[test]
+    fn only_web_and_mail_links_are_opened() {
+        for ok in ["https://example.org/a?b=1&c=2", "http://example.org", "mailto:me@example.org", "HTTPS://EXAMPLE.ORG"] {
+            assert!(is_safe_url(ok), "{ok}");
+        }
+        for bad in ["file:///C:/Windows/System32/calc.exe", "javascript:alert(1)", r"\\server\share\x.exe", "ftp://x", "calc.exe", "https://x\"y", "https://x\ny", "", "data:text/html,hi"] {
+            assert!(!is_safe_url(bad), "{bad}");
+        }
     }
 
     #[test]

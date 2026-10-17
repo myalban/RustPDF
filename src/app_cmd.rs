@@ -428,7 +428,11 @@ impl App {
         match m {
             Msg::Status(s) => self.say(s),
             Msg::Error(s) => self.err(s),
-            Msg::OpenUri(u) => crate::sys::open_url(&u),
+            Msg::OpenUri(u) => {
+                if !crate::sys::open_url(&u) {
+                    self.err(t("link_blocked"));
+                }
+            }
             Msg::Cmd(c) => self.run_cmd(c, ctx),
             Msg::SetTool(t) => self.set_tool(t),
             Msg::SelectionChanged => {

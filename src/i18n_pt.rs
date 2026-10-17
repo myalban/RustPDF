@@ -78,6 +78,7 @@ pub const T: &[(&str, &str)] = &[
     ("pref_cache", "Cache de renderização"),
     ("pref_undo_mem", "Memória de anulação"),
     ("pref_restore_view", "Reabrir na última página"),
+    ("link_blocked", "Ligação bloqueada (só são abertas ligações http, https e mailto)"),
     ("pref_reading_default", "Abrir os documentos em modo de leitura"),
     ("pref_check_updates", "Procurar atualizações"),
     ("pref_update_url", "URL de atualização"),

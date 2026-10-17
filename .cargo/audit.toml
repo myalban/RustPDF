@@ -1,0 +1,5 @@
+[advisories]
+# RUSTSEC-2023-0071 (rsa, "Marvin" timing side channel): no fixed release exists. It matters for servers that
+# decrypt attacker-chosen messages over a network; RustPDF only signs locally with the user's own key.
+# Revisit when the crate publishes a fix or when RSA is moved to another implementation.
+ignore = ["RUSTSEC-2023-0071"]

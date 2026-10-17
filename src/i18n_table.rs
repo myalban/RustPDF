@@ -82,6 +82,7 @@ pub const TABLE: &[(&str, &str, &str)] = &[
     ("pref_cache", "Cache de rendu", "Render cache"),
     ("pref_undo_mem", "Mémoire d'annulation", "Undo memory"),
     ("pref_restore_view", "Rouvrir à la dernière page", "Reopen at last page"),
+    ("link_blocked", "Lien bloqué (seuls les liens http, https et mailto sont ouverts)", "Link blocked (only http, https and mailto links are opened)"),
     ("pref_reading_default", "Ouvrir les documents en mode lecture", "Open documents in reading mode"),
     ("pref_check_updates", "Vérifier les mises à jour", "Check for updates"),
     ("pref_update_url", "Adresse des mises à jour", "Update URL"),
