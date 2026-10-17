@@ -199,6 +199,17 @@ pub fn path_to_svg(d: &PathData) -> String {
 }
 
 /// Saves an image to a file; the format is deduced from the extension. JPEG/BMP: composited on a white background.
+/// Opens an image chosen by the user with decoding limits (a tiny file can claim to be gigapixels large).
+pub fn open_image_safe(path: &Path) -> Result<DynamicImage, String> {
+    let mut reader = image::ImageReader::open(path).map_err(|e| e.to_string())?.with_guessed_format().map_err(|e| e.to_string())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(20_000);
+    limits.max_image_height = Some(20_000);
+    limits.max_alloc = Some(768 * 1024 * 1024);
+    reader.limits(limits);
+    reader.decode().map_err(|e| e.to_string())
+}
+
 pub fn save_image_file(img: &DynamicImage, path: &Path) -> Result<(), String> {
     let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
     let out = if matches!(ext.as_str(), "jpg" | "jpeg" | "bmp") {

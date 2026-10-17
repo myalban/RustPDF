@@ -8,22 +8,27 @@ use pdfium_render::prelude::*;
 use std::path::Path;
 
 /// Initializes PDFium: looks for the PDFium library (`pdfium.dll`, `libpdfium.so` or `libpdfium.dylib`) next to the
-/// executable, in the current folder, then in the system.
+/// executable. The current folder is only searched in debug builds and tests (for `cargo run`): in a release build it
+/// is the folder of the document being opened, and a library planted there would be loaded and run.
 pub fn load_pdfium() -> anyhow::Result<&'static Pdfium> {
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_default();
-    let candidates = [
-        Pdfium::pdfium_platform_library_name_at_path(&exe_dir),
-        Pdfium::pdfium_platform_library_name_at_path("./"),
-    ];
+    let mut candidates = vec![Pdfium::pdfium_platform_library_name_at_path(&exe_dir)];
+    if cfg!(any(debug_assertions, test)) {
+        candidates.push(Pdfium::pdfium_platform_library_name_at_path("./"));
+    }
     let mut last = None;
     for c in candidates {
         match Pdfium::bind_to_library(c) {
             Ok(b) => return Ok(Box::leak(Box::new(Pdfium::new(b)))),
             Err(e) => last = Some(e),
         }
+    }
+    // The system library path is trusted on Linux and macOS; on Windows it includes the current folder.
+    if cfg!(windows) && !cfg!(any(debug_assertions, test)) {
+        return Err(anyhow::anyhow!("PDFium library (pdfium.dll) not found next to the application: {:?}", last));
     }
     match Pdfium::bind_to_system_library() {
         Ok(b) => Ok(Box::leak(Box::new(Pdfium::new(b)))),
@@ -56,9 +61,17 @@ fn map_open_err(e: PdfiumError) -> OpenErr {
     }
 }
 
+/// Largest PDF file that is opened.
+pub const MAX_PDF_BYTES: u64 = 1024 * 1024 * 1024;
+
 pub fn open_path(pdfium: &'static Pdfium, path: &Path, password: Option<&str>) -> Result<PdfDocument<'static>, OpenErr> {
     if !path.exists() {
         return Err(OpenErr::Missing(path.display().to_string()));
+    }
+    // a crafted file must not be able to exhaust the memory just by being huge
+    let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    if size > MAX_PDF_BYTES {
+        return Err(OpenErr::Other(format!("File too large ({} MB, the limit is {} MB)", size / 1_048_576, MAX_PDF_BYTES / 1_048_576)));
     }
     let bytes = std::fs::read(path).map_err(|e| OpenErr::Missing(e.to_string()))?;
     open_bytes(pdfium, bytes, password)

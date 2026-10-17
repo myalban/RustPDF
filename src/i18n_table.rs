@@ -317,6 +317,7 @@ pub const TABLE: &[(&str, &str, &str)] = &[
     ("update_available", "Nouvelle version disponible :", "New version available:"),
     ("update_up_to_date", "Vous utilisez la dernière version", "You are up to date"),
     ("update_error", "Vérification impossible", "Could not check for updates"),
+    ("update_no_release", "Aucune version n'a encore été publiée.", "No release has been published yet."),
     ("prop_title", "Titre", "Title"),
     ("prop_author", "Auteur", "Author"),
     ("prop_subject", "Sujet", "Subject"),

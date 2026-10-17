@@ -307,6 +307,7 @@ pub const T: &[(&str, &str)] = &[
     ("update_available", "Nueva versión disponible:"),
     ("update_up_to_date", "Está usando la última versión"),
     ("update_error", "No se pudo comprobar si hay actualizaciones"),
+    ("update_no_release", "Todavía no se ha publicado ninguna versión."),
     ("prop_title", "Título"),
     ("prop_author", "Autor"),
     ("prop_subject", "Asunto"),

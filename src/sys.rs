@@ -16,6 +16,30 @@ fn run(cmd: &mut Command) -> std::io::Result<std::process::ExitStatus> {
     cmd.status()
 }
 
+/// Reduces what a compromised process could do. Called first thing in `main`.
+/// Windows: DLLs are only searched in the application folder and in System32 (never in the current folder, which is
+/// the folder of the PDF being opened: a `pdfium.dll` planted next to a document would otherwise be loaded), extension
+/// points (injected input-method / hook DLLs) are disabled, and images from low-integrity locations are refused.
+pub fn harden_process() {
+    #[cfg(windows)]
+    {
+        use std::ffi::c_void;
+        use windows_sys::Win32::System::LibraryLoader::{LOAD_LIBRARY_SEARCH_APPLICATION_DIR, LOAD_LIBRARY_SEARCH_SYSTEM32, SetDefaultDllDirectories, SetDllDirectoryW};
+        use windows_sys::Win32::System::Threading::{ProcessExtensionPointDisablePolicy, ProcessImageLoadPolicy, SetProcessMitigationPolicy};
+        let empty: [u16; 1] = [0];
+        // SAFETY: plain Win32 calls with valid, correctly sized arguments; failures are ignored on purpose
+        // (older Windows versions do not support every policy).
+        unsafe {
+            SetDllDirectoryW(empty.as_ptr());
+            SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
+            let extension_points: u32 = 1; // DisableExtensionPoints
+            SetProcessMitigationPolicy(ProcessExtensionPointDisablePolicy, &extension_points as *const u32 as *const c_void, 4);
+            let image_load: u32 = 0b110; // NoLowMandatoryLabelImages | PreferSystem32Images
+            SetProcessMitigationPolicy(ProcessImageLoadPolicy, &image_load as *const u32 as *const c_void, 4);
+        }
+    }
+}
+
 /// Program that opens a file, folder or URL with the default application of the platform.
 #[cfg(target_os = "macos")]
 const OPENER: &str = "open";

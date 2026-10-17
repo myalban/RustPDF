@@ -159,7 +159,7 @@ impl App {
                             self.update_found = Some((r.version.clone(), msg));
                         }
                         crate::updater::Outcome::Error(e) => logx::warn(format!("update check failed: {e}")),
-                        crate::updater::Outcome::UpToDate => {}
+                        crate::updater::Outcome::UpToDate | crate::updater::Outcome::NoRelease => {}
                     }
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => ctx.request_repaint_after(std::time::Duration::from_secs(1)),

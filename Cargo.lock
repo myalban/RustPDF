@@ -4346,6 +4346,7 @@ dependencies = [
  "signature",
  "spki 0.7.3",
  "sys-locale",
+ "windows-sys 0.59.0",
  "winresource",
  "x509-cert 0.2.5",
 ]

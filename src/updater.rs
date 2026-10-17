@@ -22,6 +22,7 @@ pub struct Release {
 #[derive(Deserialize, Default)]
 #[serde(default)]
 struct Raw {
+    message: String,
     tag_name: String,
     html_url: String,
     body: String,
@@ -33,8 +34,12 @@ struct Raw {
 pub enum Outcome {
     Newer(Release),
     UpToDate,
+    NoRelease,
     Error(String),
 }
+
+/// Error text of `parse` when the repository has no published release (GitHub answers "Not Found").
+pub const NO_RELEASE: &str = "no release";
 
 pub fn current_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -59,6 +64,9 @@ pub fn is_newer(candidate: &str, current: &str) -> bool {
 /// Reads a release from the GitHub API answer or from the custom JSON file.
 pub fn parse(json: &str) -> Result<Release, String> {
     let r: Raw = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    if r.tag_name.is_empty() && r.version.is_empty() && r.message == "Not Found" {
+        return Err(NO_RELEASE.into());
+    }
     let version = if r.tag_name.is_empty() { r.version } else { r.tag_name }.trim().trim_start_matches('v').to_string();
     if version.is_empty() {
         return Err("no version in the answer".into());
@@ -94,6 +102,7 @@ pub fn check_release(url: &str) -> Outcome {
     match fetch(url).and_then(|s| parse(&s)) {
         Ok(r) if is_newer(&r.version, current_version()) => Outcome::Newer(r),
         Ok(_) => Outcome::UpToDate,
+        Err(e) if e == NO_RELEASE => Outcome::NoRelease,
         Err(e) => Outcome::Error(e),
     }
 }
@@ -103,6 +112,7 @@ pub fn describe(o: &Outcome) -> String {
     match o {
         Outcome::Newer(r) => format!("{} {} → {}\n{}\n{}", t("update_available"), current_version(), r.version, r.url, r.notes.trim()),
         Outcome::UpToDate => format!("{} ({})", t("update_up_to_date"), current_version()),
+        Outcome::NoRelease => t("update_no_release").to_string(),
         Outcome::Error(e) => format!("{}: {e}", t("update_error")),
     }
 }
@@ -140,6 +150,7 @@ mod tests {
     fn answers_without_a_version_are_errors() {
         assert!(parse(r#"{"message":"Not Found"}"#).is_err());
         assert!(parse("not json").is_err());
+        assert_eq!(parse(r#"{"message":"Not Found","status":"404"}"#), Err(NO_RELEASE.to_string()));
     }
 
     #[test]

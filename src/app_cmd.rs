@@ -529,7 +529,7 @@ impl App {
 
     pub fn add_image_dialog(&mut self, page: usize, x: f32, y: f32) {
         let Some(file) = rfd::FileDialog::new().add_filter("Images", &["png", "jpg", "jpeg", "bmp", "gif", "webp", "tif", "tiff"]).pick_file() else { return };
-        match image::open(&file) {
+        match crate::export::open_image_safe(&file) {
             Ok(img) => {
                 let w = 200.0f32.min(img.width() as f32 * 0.75).max(40.0);
                 let mut new = None;
@@ -546,7 +546,7 @@ impl App {
 
     pub fn replace_image_dialog(&mut self, page: usize, idx: usize) {
         let Some(file) = rfd::FileDialog::new().add_filter("Images", &["png", "jpg", "jpeg", "bmp", "gif", "webp", "tif", "tiff"]).pick_file() else { return };
-        match image::open(&file) {
+        match crate::export::open_image_safe(&file) {
             Ok(img) => self.edit(false, |tb, mem| tb.replace_image(page, idx, &img, mem)),
             Err(e) => self.err(format!("{}: {e}", t("err_image"))),
         }

@@ -6,13 +6,34 @@ Please **do not open a public issue** for a security problem. Use GitHub's priva
 
 Useful details: the RustPDF version, your OS, and a PDF (or steps) that reproduces the problem.
 
-## What RustPDF does and does not do
-- PDFs are untrusted input. They are parsed by PDFium and by `lopdf`; PDF JavaScript is **never executed**.
-- Links inside a PDF are opened only if they are `http`, `https` or `mailto`; anything else (`file:`, `javascript:`, network shares…) is refused.
+## Opening a PDF you do not trust
+A PDF is a complex file format and every PDF reader, including this one, has had or will have parsing bugs.
+RustPDF parses documents with **PDFium** (the engine of Chrome, written in C++) and with **lopdf** (Rust).
+
+**RustPDF does not run in an operating-system sandbox.** Browsers protect you by running the PDF engine in a separate,
+locked-down process. RustPDF is a single process, so a bug in PDFium that gives an attacker code execution would run with
+your user rights. If a document really is hostile (from an unknown sender, a suspicious download…), open it in a throw-away
+environment such as **Windows Sandbox**, a virtual machine, or your browser's built-in viewer, not in RustPDF.
+
+What RustPDF does to reduce the risk:
+- **PDF JavaScript is never executed** (PDFium is used without a JavaScript engine), and PDF actions such as *Launch* are not implemented.
+- **Links** inside a PDF are opened only if they are `http`, `https` or `mailto`, and without going through a shell. `file:`, `javascript:`, network shares and anything else are refused.
+- **Attachments** are only saved where you tell them to be saved, never opened or run.
+- **Library loading**: PDFium is loaded only from the application folder (never from the folder of the document being opened), and on Windows the process restricts DLL searching to the application folder and System32, disables extension points and refuses images from low-integrity locations. This blocks "DLL planting" next to a downloaded PDF.
+- **Downloads are verified**: the PDFium archive fetched by the build scripts is checked against a pinned SHA-256. A weekly job tells the maintainer when a newer PDFium build (with its security fixes) is available.
+- **Resource limits**: files over 1 GiB are refused, rendered bitmaps are capped, and images you import are decoded with size limits.
+- **Dependencies** are checked weekly against the RustSec advisory database, and updates are proposed automatically.
+
+## What else to know
 - No document content is sent anywhere. The only network access is an optional once-a-day request to GitHub to look for a newer release (Preferences → *Check for updates*); nothing is downloaded or installed automatically.
-- Documents with unsaved changes are copied to the application data folder for crash recovery (`%APPDATA%\RustPDF\autosave`, `~/.config/rustpdf/autosave`, `~/Library/Application Support/RustPDF/autosave`) and removed once the document is saved or the recovery is dismissed. Disable it in Preferences if the documents are sensitive.
+- Documents with unsaved changes are copied to the application data folder for crash recovery (`%APPDATA%\RustPDF\autosave`, `~/.config/rustpdf/autosave`, `~/Library/Application Support/RustPDF/autosave`) and removed once the document is saved or the recovery is dismissed. The copies are not encrypted; disable autosave in Preferences if the documents are sensitive.
 - Digital signatures use the RustCrypto `rsa` crate, which has a known timing side channel (RUSTSEC-2023-0071, no fix available yet) that matters for servers, not for a desktop app signing locally with its own key. They do not validate the certificate chain against a trust store: a valid mark means "unmodified since signed by this key", not "signed by a trusted identity".
 - Redaction removes the text, the image pixels and the annotations under the marked area. Always re-open the saved file and check before sharing it.
+- Release binaries are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper warn on first launch.
+
+## Planned
+- Running PDFium in a separate restricted process (the browser model), starting with a read-only viewing mode, would be the real sandbox. It is a large change: the whole editing engine talks to PDFium directly today.
+- Signed releases.
 
 ## Supported versions
 Only the latest release receives fixes.

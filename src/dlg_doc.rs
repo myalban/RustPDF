@@ -743,7 +743,7 @@ impl App {
                 _ => {
                     if ui.button(t("choose_image")).clicked() {
                         if let Some(f) = rfd::FileDialog::new().add_filter("Images", &["png", "jpg", "jpeg", "bmp", "webp"]).pick_file() {
-                            if let Ok(img) = image::open(&f) {
+                            if let Ok(img) = crate::export::open_image_safe(&f) {
                                 payload = Some(SigPayload::Image(img));
                             }
                         }

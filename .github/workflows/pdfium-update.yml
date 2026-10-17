@@ -1,0 +1,33 @@
+name: PDFium update check
+
+# PDFium parses every document you open: security fixes matter. This opens an issue when bblanchon/pdfium-binaries
+# publishes a build newer than the one pinned in scripts/fetch-pdfium.sh.
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare with the pinned version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest="$(curl -fsSL https://api.github.com/repos/bblanchon/pdfium-binaries/releases/latest | jq -r .tag_name)"
+          pinned="$(sed -n 's/^PINNED_VERSION="\(.*\)"/\1/p' scripts/fetch-pdfium.sh)"
+          echo "latest=$latest pinned=$pinned"
+          if [ -n "$latest" ] && [ "$latest" != "null" ] && [ "$latest" != "$pinned" ]; then
+            title="PDFium update available: $latest"
+            if [ -z "$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number')" ]; then
+              gh issue create --title "$title" --label dependencies --body "A newer PDFium build exists ($latest, pinned: $pinned).
+
+          To update: change PINNED_VERSION and the SHA-256 values in scripts/fetch-pdfium.sh and scripts/fetch-pdfium.ps1 (compute them from the downloaded archives), run the tests on every platform, then publish a release."
+            fi
+          fi

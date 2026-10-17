@@ -59,6 +59,7 @@ mod view;
 use std::path::PathBuf;
 
 fn main() -> eframe::Result<()> {
+    sys::harden_process();
     logx::install_panic_hook();
     logx::info(format!("starting RustPDF {}", env!("CARGO_PKG_VERSION")));
     let pdfium = match pdfx::load_pdfium() {
