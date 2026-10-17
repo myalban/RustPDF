@@ -14,8 +14,8 @@ categories = ["visualization", "multimedia::images"]
 anyhow = "1.0.104"
 arboard = "3.7.0"
 eframe = "0.37.0"
-fontdb = "0.23"
-getrandom = "0.3"
+fontdb = "0.24"
+getrandom = "0.4"
 image = "0.25.10"
 lopdf = "0.45.0"
 pdfium-render = "0.9.4"
@@ -46,7 +46,7 @@ strip = true
 winresource = "0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Security_Isolation", "Win32_Storage_FileSystem", "Win32_System_JobObjects", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Pipes", "Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Security_Isolation", "Win32_Storage_FileSystem", "Win32_System_JobObjects", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Pipes", "Win32_System_Threading"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 landlock = "0.4"
