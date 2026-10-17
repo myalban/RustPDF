@@ -48,9 +48,13 @@ impl App {
     }
 
     pub fn run_cmd(&mut self, cmd: Cmd, ctx: &egui::Context) {
+        if self.protected_command(&cmd) {
+            return;
+        }
         let mem = self.mem();
         match cmd {
             Cmd::Open => self.pick_and_open(),
+            Cmd::OpenUnprotected => self.pick_and_open_editable(),
             Cmd::OpenRecent(i) => {
                 if let Some(e) = self.recent.entries.get(i).cloned() {
                     self.open_path(&e.path_buf(), None);

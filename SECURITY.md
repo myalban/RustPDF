@@ -10,10 +10,24 @@ Useful details: the RustPDF version, your OS, and a PDF (or steps) that reproduc
 A PDF is a complex file format and every PDF reader, including this one, has had or will have parsing bugs.
 RustPDF parses documents with **PDFium** (the engine of Chrome, written in C++) and with **lopdf** (Rust).
 
-**RustPDF does not run in an operating-system sandbox.** Browsers protect you by running the PDF engine in a separate,
-locked-down process. RustPDF is a single process, so a bug in PDFium that gives an attacker code execution would run with
-your user rights. If a document really is hostile (from an unknown sender, a suspicious download…), open it in a throw-away
-environment such as **Windows Sandbox**, a virtual machine, or your browser's built-in viewer, not in RustPDF.
+**Protected view (default).** Every document first opens in a *protected view*: a separate worker process (`rustpdf --pdf-worker`)
+parses and renders it with PDFium and sends back only bitmaps and link targets. The worker receives the file over a pipe, never
+touches the file system, and the application validates everything it sends back (sizes, bitmap length, numbers, link addresses).
+A worker that stops responding for 40 seconds is killed. Per operating system:
+- **Windows**: the worker runs in an *AppContainer* (no access to your files, no network, no other programs) inside a job object
+  (one process, 3 GiB memory cap, no UI access) with process mitigations (no dynamic code, strict handle checks, no remote or
+  low-integrity images). Its copy of the program is staged in `%LOCALAPPDATA%\RustPDF\worker`; the AppContainer profile is named `RustPDF.ProtectedViewer`.
+- **Linux**: the worker locks itself with `no_new_privs`, Landlock (no file writes, no TCP on kernel 6.7+) and a seccomp filter
+  (no sockets, no new programs, no `ptrace`, `mount`, `bpf`…). It can still *read* files your user can read, by design of this filter.
+- **macOS**: the worker enters the Seatbelt `pure-computation` profile. This path has **not been tested on real hardware yet**.
+
+You can check the isolation on your machine with `rustpdf --sandbox-check [file.pdf] --selftest`: it tries to read a file,
+write a file, start a program and reach the network from inside the worker, and reports each as *blocked* or *ALLOWED*.
+
+**Limits, stated plainly.** *Enable editing* opens the document in the editor, which parses it with PDFium **inside the
+application process, without a sandbox**: only do that for files you trust. A bug in the operating system's isolation itself,
+or a PDFium bug chained with a kernel bug, is not covered. For documents that are really hostile, a virtual machine or
+Windows Sandbox remains the safest choice.
 
 What RustPDF does to reduce the risk:
 - **PDF JavaScript is never executed** (PDFium is used without a JavaScript engine), and PDF actions such as *Launch* are not implemented.
@@ -35,7 +49,6 @@ What RustPDF does to reduce the risk:
 - Release binaries are not code-signed yet, so Windows SmartScreen and macOS Gatekeeper warn on first launch.
 
 ## Planned
-- Running PDFium in a separate restricted process (the browser model), starting with a read-only viewing mode, would be the real sandbox. It is a large change: the whole editing engine talks to PDFium directly today.
 - Signed releases.
 
 ## Supported versions

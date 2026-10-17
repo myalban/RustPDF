@@ -114,6 +114,7 @@ impl Tool {
 pub enum Cmd {
     // file
     Open,
+    OpenUnprotected,
     OpenRecent(usize),
     Save,
     SaveAs,
@@ -224,6 +225,7 @@ impl Cmd {
     pub fn label_key(self) -> &'static str {
         match self {
             Cmd::Open => "cmd_open",
+            Cmd::OpenUnprotected => "cmd_open_unprotected",
             Cmd::OpenRecent(_) => "cmd_open_recent",
             Cmd::Save => "cmd_save",
             Cmd::SaveAs => "cmd_save_as",
@@ -326,6 +328,7 @@ impl Cmd {
     pub fn icon(self) -> &'static str {
         match self {
             Cmd::Open | Cmd::OpenRecent(_) => icons::FOLDER_OPEN,
+            Cmd::OpenUnprotected => icons::PENCIL_SIMPLE,
             Cmd::Save | Cmd::SaveAs => icons::FLOPPY_DISK,
             Cmd::Undo => icons::ARROW_COUNTER_CLOCKWISE,
             Cmd::Redo => icons::ARROW_CLOCKWISE,
@@ -379,6 +382,7 @@ impl Cmd {
         let k = |m, key| Some(KeyboardShortcut::new(m, key));
         match self {
             Cmd::Open => k(c, Key::O),
+            Cmd::OpenUnprotected => k(cs, Key::O),
             Cmd::Save => k(c, Key::S),
             Cmd::SaveAs => k(cs, Key::S),
             Cmd::CloseTab => k(c, Key::W),
@@ -422,7 +426,7 @@ impl Cmd {
     pub fn palette_list() -> Vec<Cmd> {
         use Cmd::*;
         let mut v = vec![
-            Open, Save, SaveAs, CloseTab, Export, Undo, Redo, Copy, Cut, Paste, PasteImage, Delete, SelectAll, Duplicate, Find, FindNext, FindPrev,
+            Open, OpenUnprotected, Save, SaveAs, CloseTab, Export, Undo, Redo, Copy, Cut, Paste, PasteImage, Delete, SelectAll, Duplicate, Find, FindNext, FindPrev,
             Replace, Group, Ungroup, BringFront, SendBack, BringForward, SendBackward, AlignLeft, AlignCenter, AlignRight, AlignTop,
             AlignMiddle, AlignBottom, DistributeH, DistributeV, Rotate90, RotateMinus90, FlipH, FlipV, ZoomIn, ZoomOut, Zoom100, FitWidth,
             FitPage, ViewSingle, ViewContinuous, ViewTwo, ViewTwoContinuous, ToggleCover, Fullscreen, Presentation, ToggleSidePanel,

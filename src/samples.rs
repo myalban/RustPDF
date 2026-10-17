@@ -91,6 +91,15 @@ mod tests {
         assert_eq!(doc.pages().len(), 3);
     }
 
+    /// Writes `samples/demo_protected.pdf` (user password: `demo`) to try protected view with a password.
+    #[test]
+    fn write_protected_demo_pdf() {
+        let doc = build_demo(crate::pdfx::test_pdfium());
+        let bytes = doc.save_to_bytes().unwrap();
+        let sec = crate::pdfedit_doc::Security { user_password: "demo".into(), owner_password: "demo".into(), ..Default::default() };
+        std::fs::write("samples/demo_protected.pdf", crate::pdfedit_doc::encrypt(&bytes, &sec).unwrap()).unwrap();
+    }
+
     #[test]
     fn demo_groups_into_expected_blocks() {
         let p = crate::pdfx::test_pdfium();

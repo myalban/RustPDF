@@ -2,6 +2,11 @@
 #![allow(dead_code)]
 
 mod annots;
+mod client;
+mod pdf_worker;
+mod protected;
+mod sandbox;
+mod worker_proto;
 mod i18n_de;
 mod i18n_es;
 mod i18n_it;
@@ -17,6 +22,7 @@ mod app;
 mod app_cmd;
 mod app_ext;
 mod app_misc;
+mod app_protected;
 mod app_ui;
 mod autosave;
 mod deskew;
@@ -59,6 +65,13 @@ mod view;
 use std::path::PathBuf;
 
 fn main() -> eframe::Result<()> {
+    // the isolated PDF worker of protected view: no window, no preferences, only the pipe protocol
+    if std::env::args().nth(1).as_deref() == Some("--sandbox-check") {
+        std::process::exit(sandbox::check(&std::env::args().skip(2).collect::<Vec<_>>()));
+    }
+    if std::env::args().nth(1).as_deref() == Some("--pdf-worker") {
+        std::process::exit(pdf_worker::run());
+    }
     sys::harden_process();
     logx::install_panic_hook();
     logx::info(format!("starting RustPDF {}", env!("CARGO_PKG_VERSION")));

@@ -263,6 +263,13 @@ pub fn scan_page(page: &PdfPage, idx: usize, ver: u64, paragraphs: bool) -> Page
     }
 
     // Links
+    let links = page_links(page);
+
+    PageInfo { page: idx, ver, paragraphs, geom, objects, fields, annots, links }
+}
+
+/// Links of a page (targets are untrusted: callers must check them before opening anything).
+pub fn page_links(page: &PdfPage) -> Vec<LinkInfo> {
     let mut links = vec![];
     for link in page.links().iter() {
         let Ok(r) = link.rect() else { continue };
@@ -289,8 +296,7 @@ pub fn scan_page(page: &PdfPage, idx: usize, ver: u64, paragraphs: bool) -> Page
         }
         links.push(LinkInfo { rect: rect_of(&r), target });
     }
-
-    PageInfo { page: idx, ver, paragraphs, geom, objects, fields, annots, links }
+    links
 }
 
 /// Attaches to the text blocks the thin lines (underline, strikethrough) that go with them:

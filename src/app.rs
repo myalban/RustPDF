@@ -93,6 +93,11 @@ pub struct App {
     pub field_buf: ((usize, usize), String),
     pub new_field_name: String,
     pub dlg2: Option<crate::dlg_common::Dlg2>,
+    pub egui_ctx: Option<egui::Context>,
+    /// Documents shown in protected view (parsed by the isolated worker).
+    pub pviews: Vec<crate::protected::ProtectedView>,
+    /// Index in `pviews` of the protected view being shown, if one is active instead of a normal tab.
+    pub pactive: Option<usize>,
     pub update_rx: Option<std::sync::mpsc::Receiver<crate::updater::Outcome>>,
     pub update_started: bool,
     /// Message and version of a newer release found by the automatic check.
@@ -162,6 +167,9 @@ impl App {
             field_buf: ((usize::MAX, 0), String::new()),
             new_field_name: "field".into(),
             dlg2: None,
+            egui_ctx: None,
+            pviews: vec![],
+            pactive: None,
             update_rx: None,
             update_started: false,
             update_found: None,
@@ -208,10 +216,11 @@ impl App {
     }
 
     /// Opens a file in a new tab (or activates the existing tab).
-    pub fn open_path(&mut self, path: &Path, password: Option<String>) {
+    pub fn open_editable(&mut self, path: &Path, password: Option<String>, reading_by_default: bool) {
         let clean = crate::prefs::clean_path(path);
         if let Some(i) = self.tabs.iter().position(|t| t.path.as_ref().map(|p| crate::prefs::same_path(p, &clean)).unwrap_or(false)) {
             self.active = i;
+            self.pactive = None;
             self.say(t("already_open"));
             return;
         }
@@ -243,7 +252,8 @@ impl App {
                 self.recent.add(&clean);
                 self.tabs.push(tab);
                 self.active = self.tabs.len() - 1;
-                if self.prefs.open_in_reading_mode && !self.reading {
+                self.pactive = None;
+                if reading_by_default && self.prefs.open_in_reading_mode && !self.reading {
                     self.pending_cmds.push(Cmd::ReadingMode);
                 }
                 self.say(format!("{} — {}", t("opened"), clean.display()));

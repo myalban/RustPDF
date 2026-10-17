@@ -14,6 +14,9 @@ use eframe::egui::{self, Color32, RichText};
 impl App {
     /// Applies the language, theme and fonts (once, then on every change).
     fn setup_once(&mut self, ctx: &egui::Context) {
+        if self.egui_ctx.is_none() {
+            self.egui_ctx = Some(ctx.clone());
+        }
         if !self.fonts_ready {
             let mut fonts = egui::FontDefinitions::default();
             fonts.font_data.insert("phosphor".into(), std::sync::Arc::new(egui::FontData::from_static(include_bytes!("../assets/Phosphor.ttf"))));
@@ -61,7 +64,7 @@ impl App {
                 }
             }
         }
-        if !typing {
+        if !typing && self.pactive.is_none() {
             if ctx.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) {
                 cmds.push(Cmd::Delete);
             }
@@ -182,9 +185,13 @@ impl App {
             }
         }
         // window title
-        let title = match self.tabs.get(self.active) {
-            Some(tb) => format!("{}{} — RustPDF", if tb.dirty { "● " } else { "" }, tb.title),
-            None => "RustPDF".to_string(),
+        let title = if let Some(v) = self.pactive.and_then(|j| self.pviews.get(j)) {
+            format!("🔒 {} — RustPDF", v.title)
+        } else {
+            match self.tabs.get(self.active) {
+                Some(tb) => format!("{}{} — RustPDF", if tb.dirty { "● " } else { "" }, tb.title),
+                None => "RustPDF".to_string(),
+            }
         };
         if title != self.title_shown {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -223,6 +230,7 @@ impl App {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button(t("menu_file"), |ui| {
                 self.menu_cmd(ui, ctx, Cmd::Open);
+                self.menu_cmd(ui, ctx, Cmd::OpenUnprotected);
                 ui.menu_button(format!("{} {}", icons::CLOCK_COUNTER_CLOCKWISE, t("recent")), |ui| {
                     if self.recent.entries.is_empty() {
                         ui.weak(t("no_recent"));
@@ -368,7 +376,7 @@ impl App {
     }
 
     fn toolbar(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context) {
-        let has = !self.tabs.is_empty();
+        let has = !self.tabs.is_empty() || !self.pviews.is_empty();
         let tool = self.tool;
         // wide window: everything on a single line; otherwise two rows (tools, then view)
         let single = ui.available_width() > 1260.0;
@@ -472,15 +480,17 @@ impl App {
     }
 
     fn tabs_bar(&mut self, ui: &mut egui::Ui) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty() && self.pviews.is_empty() {
             return;
         }
         let mut close = None;
         let mut select = None;
+        let mut close_view = None;
+        let mut select_view = None;
         ui.horizontal(|ui| {
             for (i, tab) in self.tabs.iter().enumerate() {
                 let title = format!("{}{}", if tab.dirty { "● " } else { "" }, tab.title);
-                let r = ui.selectable_label(i == self.active, title).on_hover_text(tab.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default());
+                let r = ui.selectable_label(self.pactive.is_none() && i == self.active, title).on_hover_text(tab.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default());
                 if r.clicked() {
                     select = Some(i);
                 }
@@ -492,12 +502,33 @@ impl App {
                 }
                 ui.add_space(6.0);
             }
+            // documents in protected view
+            for (j, v) in self.pviews.iter().enumerate() {
+                let r = ui.selectable_label(self.pactive == Some(j), format!("{} {}", icons::LOCK, v.title)).on_hover_text(format!("{}\n{}", v.path.display(), t("protected_banner")));
+                if r.clicked() {
+                    select_view = Some(j);
+                }
+                if r.middle_clicked() {
+                    close_view = Some(j);
+                }
+                if ui.small_button(icons::X).clicked() {
+                    close_view = Some(j);
+                }
+                ui.add_space(6.0);
+            }
         });
         if let Some(i) = select {
             self.active = i;
+            self.pactive = None;
+        }
+        if let Some(j) = select_view {
+            self.pactive = Some(j);
         }
         if let Some(i) = close {
             self.close_tab(i, false);
+        }
+        if let Some(j) = close_view {
+            self.close_protected(j);
         }
     }
 
@@ -621,7 +652,13 @@ impl App {
                 ui.weak(format!("x {}  y {}", self.prefs.units.format(x), self.prefs.units.format(y)));
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if let Some(tab) = self.tabs.get_mut(self.active) {
+                if let Some(v) = self.pactive.and_then(|j| self.pviews.get(j)) {
+                    ui.label(format!("{:.0} %", v.zoom * 100.0));
+                    ui.separator();
+                    ui.label(format!("/ {}", v.sizes.len()));
+                    ui.label((v.page + 1).to_string());
+                    ui.label(t("page"));
+                } else if let Some(tab) = self.tabs.get_mut(self.active) {
                     let n = tab.page_count();
                     // zoom
                     let mut pct = tab.view.zoom * 100.0;
@@ -698,6 +735,7 @@ impl eframe::App for App {
         self.cache.begin_frame();
         self.tick(&ctx);
         self.global_shortcuts(&ctx);
+        self.poll_protected(&ctx);
 
         if !self.presentation {
             egui::Panel::top("menu").show(ui, |ui| {
@@ -706,12 +744,12 @@ impl eframe::App for App {
             egui::Panel::top("toolbar").show(ui, |ui| {
                 self.toolbar(ui, &ctx);
             });
-            if !self.tabs.is_empty() {
+            if !self.tabs.is_empty() || !self.pviews.is_empty() {
                 egui::Panel::top("tabs").show(ui, |ui| {
                     self.tabs_bar(ui);
                 });
             }
-            if self.search_open && !self.tabs.is_empty() {
+            if self.search_open && !self.tabs.is_empty() && self.pactive.is_none() {
                 egui::Panel::top("searchbar").show(ui, |ui| {
                     self.search_bar(ui);
                 });
@@ -719,12 +757,12 @@ impl eframe::App for App {
             egui::Panel::bottom("status").show(ui, |ui| {
                 self.status_bar(ui);
             });
-            if self.show_side && !self.tabs.is_empty() {
+            if self.show_side && !self.tabs.is_empty() && self.pactive.is_none() {
                 egui::Panel::left("side").default_size(190.0).min_size(120.0).show(ui, |ui| {
                     self.side_panel(ui);
                 });
             }
-            if self.show_props && !self.reading && !self.tabs.is_empty() {
+            if self.show_props && !self.reading && !self.tabs.is_empty() && self.pactive.is_none() {
                 egui::Panel::right("props").default_size(270.0).min_size(180.0).show(ui, |ui| {
                     self.props_panel(ui);
                 });
@@ -732,8 +770,14 @@ impl eframe::App for App {
         }
 
         let mut msgs = std::mem::take(&mut self.pending_msgs);
+        let mut protected_action = None;
         egui::CentralPanel::default().show(ui, |ui| {
-            if self.tabs.is_empty() {
+            if let Some(j) = self.pactive.filter(|j| *j < self.pviews.len()) {
+                let ppp = ctx.pixels_per_point();
+                if let Some(a) = self.pviews[j].show(ui, ppp) {
+                    protected_action = Some((j, a));
+                }
+            } else if self.tabs.is_empty() {
                 self.welcome(ui);
             } else {
                 let tool = self.tool;
@@ -780,6 +824,9 @@ impl eframe::App for App {
         self.show_dialogs(&ctx);
         self.show_dlg2(&ctx);
         self.handle_msgs(msgs, &ctx);
+        if let Some((j, a)) = protected_action {
+            self.handle_protected_action(j, a);
+        }
         // commands triggered by the menus and panels
         let cmds = std::mem::take(&mut self.pending_cmds);
         for c in cmds {
