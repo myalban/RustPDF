@@ -1,0 +1,46 @@
+# Dependency updates: one grouped pull request per ecosystem and per month, not one per crate.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      rust-dependencies:
+        patterns: ["*"]
+    ignore:
+      # The signature stack (RustCrypto) moves as a whole: a major bump of one crate breaks the others.
+      # Update it by hand when the whole set is ready (see SECURITY.md, RUSTSEC-2023-0071).
+      - dependency-name: "rsa"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sha1"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sha2"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cms"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "x509-cert"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "der"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "spki"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pkcs8"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "const-oid"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "signature"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "rand_core"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "p12-keystore"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns: ["*"]

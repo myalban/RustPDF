@@ -1,0 +1,8 @@
+/target
+/dist
+*.log
+sample_form.pdf
+# PDFium is downloaded by scripts/fetch-pdfium.*
+pdfium.dll
+libpdfium.so
+libpdfium.dylib

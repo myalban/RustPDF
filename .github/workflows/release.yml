@@ -1,0 +1,106 @@
+name: Release
+
+# Publishing a release: push a tag named v<version>, where <version> is the version in Cargo.toml.
+#   git tag -a v0.3.0 -m "RustPDF 0.3.0" && git push origin v0.3.0
+# (scripts/release.ps1 does the whole sequence.) A tag with a dash, such as v0.3.0-rc1, is published as a pre-release.
+# The tests already ran in CI on the commit being released, so they are not repeated here.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the tag matches Cargo.toml
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tag="${TAG#v}"
+          crate="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          base="${tag%%-*}"
+          echo "tag=$tag crate=$crate"
+          if [ "$base" != "$crate" ]; then
+            echo "::error::The tag ($TAG) does not match the version in Cargo.toml ($crate). Fix Cargo.toml or delete the tag."
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+
+      # same key as ci.yml: the release build compiled by CI on main is reused here
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: build-${{ runner.os }}
+          save-if: false
+
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libgtk-3-dev libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev libxi-dev libxrandr-dev libgl1-mesa-dev
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: sh installer/build-linux.sh
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: sh installer/build-macos.sh
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          scripts/fetch-pdfium.ps1
+          installer/build-portable.ps1
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $version = $env:TAG.TrimStart("v") -replace "-.*$", ""
+          & $iscc "/DAppVer=$version" installer\rustpdf.iss
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-${{ runner.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+          if-no-files-found: error
+          compression-level: 0
+
+  publish:
+    permissions:
+      contents: write
+    name: Publish the GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+      - name: Checksums of the published files
+        working-directory: dist
+        run: sha256sum -- ./* | sed "s|  ./|  |" | grep -v SHA256SUMS > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
